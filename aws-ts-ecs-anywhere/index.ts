@@ -19,66 +19,66 @@ const ssmRole = new aws.iam.Role("ssmRole", {
   ),
 });
 
-const ssmCoreRoleAttachment = new aws.iam.RolePolicyAttachment("rpa-ssmrole-ssminstancecore", {
-  policyArn: aws.iam.ManagedPolicy.AmazonSSMManagedInstanceCore,
-  role: ssmRole,
-});
+// const ssmCoreRoleAttachment = new aws.iam.RolePolicyAttachment("rpa-ssmrole-ssminstancecore", {
+//   policyArn: aws.iam.ManagedPolicy.AmazonSSMManagedInstanceCore,
+//   role: ssmRole,
+// });
 
-const ssmRoleEc2ContainerAttachment = new aws.iam.RolePolicyAttachment("rpa-ssmrole-ec2containerservice", {
-  policyArn: aws.iam.ManagedPolicy.AmazonEC2ContainerServiceforEC2Role,
-  role: ssmRole,
-});
+// const ssmRoleEc2ContainerAttachment = new aws.iam.RolePolicyAttachment("rpa-ssmrole-ec2containerservice", {
+//   policyArn: aws.iam.ManagedPolicy.AmazonEC2ContainerServiceforEC2Role,
+//   role: ssmRole,
+// });
 
-const executionRole = new aws.iam.Role("taskExecutionRole", {
-  assumeRolePolicy: aws.iam.assumeRolePolicyForPrincipal(
-    aws.iam.Principals.EcsTasksPrincipal,
-  ),
-});
+// const executionRole = new aws.iam.Role("taskExecutionRole", {
+//   assumeRolePolicy: aws.iam.assumeRolePolicyForPrincipal(
+//     aws.iam.Principals.EcsTasksPrincipal,
+//   ),
+// });
 
-const ecsTaskExecutionRoleAttachment = new aws.iam.RolePolicyAttachment("rpa-ecsanywhere-ecstaskexecution", {
-  role: executionRole,
-  policyArn: aws.iam.ManagedPolicy.AmazonECSTaskExecutionRolePolicy,
-});
+// const ecsTaskExecutionRoleAttachment = new aws.iam.RolePolicyAttachment("rpa-ecsanywhere-ecstaskexecution", {
+//   role: executionRole,
+//   policyArn: aws.iam.ManagedPolicy.AmazonECSTaskExecutionRolePolicy,
+// });
 
-const taskRole = new aws.iam.Role("taskRole", {
-  assumeRolePolicy: aws.iam.assumeRolePolicyForPrincipal(
-    aws.iam.Principals.EcsTasksPrincipal,
-  ),
-});
+// const taskRole = new aws.iam.Role("taskRole", {
+//   assumeRolePolicy: aws.iam.assumeRolePolicyForPrincipal(
+//     aws.iam.Principals.EcsTasksPrincipal,
+//   ),
+// });
 
-const taskRolePolicy = new aws.iam.RolePolicy("taskRolePolicy", {
-  role: taskRole.id,
-  policy: {
-    Version: "2012-10-17",
-    Statement: [
-      {
-        Effect: "Allow",
-        Action: [
-          "ssmmessages:CreateControlChannel",
-          "ssmmessages:CreateDataChannel",
-          "ssmmessages:OpenControlChannel",
-          "ssmmessages:OpenDataChannel",
-        ],
-        Resource: "*",
-      },
-      {
-        Effect: "Allow",
-        Action: ["logs:DescribeLogGroups"],
-        Resource: "*",
-      },
-      {
-        Effect: "Allow",
-        Action: [
-          "logs:CreateLogStream",
-          "logs:CreateLogGroup",
-          "logs:DescribeLogStreams",
-          "logs:PutLogEvents",
-        ],
-        Resource: "*",
-      },
-    ],
-  },
-});
+// const taskRolePolicy = new aws.iam.RolePolicy("taskRolePolicy", {
+//   role: taskRole.id,
+//   policy: {
+//     Version: "2012-10-17",
+//     Statement: [
+//       {
+//         Effect: "Allow",
+//         Action: [
+//           "ssmmessages:CreateControlChannel",
+//           "ssmmessages:CreateDataChannel",
+//           "ssmmessages:OpenControlChannel",
+//           "ssmmessages:OpenDataChannel",
+//         ],
+//         Resource: "*",
+//       },
+//       {
+//         Effect: "Allow",
+//         Action: ["logs:DescribeLogGroups"],
+//         Resource: "*",
+//       },
+//       {
+//         Effect: "Allow",
+//         Action: [
+//           "logs:CreateLogStream",
+//           "logs:CreateLogGroup",
+//           "logs:DescribeLogStreams",
+//           "logs:PutLogEvents",
+//         ],
+//         Resource: "*",
+//       },
+//     ],
+//   },
+// });
 
 // Set up SSM
 const ssmActivation = new aws.ssm.Activation("ecsanywhere-ssmactivation", {
@@ -117,7 +117,7 @@ const loadBalancerTag = new digitalocean.Tag("lb");
 
 for (let i = 1; i <= numberNodes; i++) {
   const droplet = new digitalocean.Droplet(`droplet-${i}`, {
-    region: digitalocean.Regions.NYC1,
+    region: digitalocean.Region.NYC1,
     size: "s-1vcpu-2gb",
     image: "ubuntu-20-04-x64",
     userData: userData,
@@ -127,70 +127,70 @@ for (let i = 1; i <= numberNodes; i++) {
 
 // Set up load balancer
 const lb = new digitalocean.LoadBalancer("lb", {
-  region: digitalocean.Regions.NYC1,
+  region: digitalocean.Region.NYC1,
   forwardingRules: [
     {
       entryPort: 80,
-      entryProtocol: digitalocean.Protocols.HTTP,
+      entryProtocol: digitalocean.Protocol.HTTP,
       targetPort: 80,
-      targetProtocol: digitalocean.Protocols.HTTP,
+      targetProtocol: digitalocean.Protocol.HTTP,
     },
   ],
   healthcheck: {
     port: 80,
-    protocol: digitalocean.Protocols.HTTP,
+    protocol: digitalocean.Protocol.HTTP,
     path: "/",
   },
   dropletTag: loadBalancerTag.name,
 });
 
 // Create ECR repository and build and push docker image
-const repo = new awsx.ecr.Repository("app");
+//const repo = new awsx.ecr.Repository("app");
 
-const image = repo.buildAndPushImage("./app");
+//const image = repo.buildAndPushImage("./app");
 
 // Set up task definition
-const taskDefinition = pulumi
-  .all([image, logGroup.name, logGroup.namePrefix])
-  .apply(
-    ([img, logGroupName, nameprefix]) =>
-      new aws.ecs.TaskDefinition("taskdefinition", {
-        family: "ecs-anywhere",
-        requiresCompatibilities: ["EXTERNAL"],
-        taskRoleArn: taskRole.arn,
-        executionRoleArn: executionRole.arn,
-        containerDefinitions: JSON.stringify([
-          {
-            name: "app",
-            image: img,
-            cpu: 256,
-            memory: 256,
-            essential: true,
-            portMappings: [
-              {
-                containerPort: 80,
-                hostPort: 80,
-              },
-            ],
-            logConfiguration: {
-              logDriver: "awslogs",
-              options: {
-                "awslogs-group": logGroupName,
-                "awslogs-region": awsRegion,
-                "awslogs-stream-prefixs": nameprefix,
-              },
-            },
-          },
-        ]),
-      }),
-  );
+// const taskDefinition = pulumi
+//   .all([image, logGroup.name, logGroup.namePrefix])
+//   .apply(
+//     ([img, logGroupName, nameprefix]) =>
+//       new aws.ecs.TaskDefinition("taskdefinition", {
+//         family: "ecs-anywhere",
+//         requiresCompatibilities: ["EXTERNAL"],
+//         taskRoleArn: taskRole.arn,
+//         executionRoleArn: executionRole.arn,
+//         containerDefinitions: JSON.stringify([
+//           {
+//             name: "app",
+//             image: img,
+//             cpu: 256,
+//             memory: 256,
+//             essential: true,
+//             portMappings: [
+//               {
+//                 containerPort: 80,
+//                 hostPort: 80,
+//               },
+//             ],
+//             logConfiguration: {
+//               logDriver: "awslogs",
+//               options: {
+//                 "awslogs-group": logGroupName,
+//                 "awslogs-region": awsRegion,
+//                 "awslogs-stream-prefixs": nameprefix,
+//               },
+//             },
+//           },
+//         ]),
+//       }),
+//   );
 
-// Deploy containers to droplets
-const service = new aws.ecs.Service("service", {
-  launchType: "EXTERNAL",
-  taskDefinition: taskDefinition.arn,
-  cluster: cluster.id,
-  desiredCount: numberNodes - 1,
-});
+// // Deploy containers to droplets
+// const service = new aws.ecs.Service("service", {
+//   launchType: "EXTERNAL",
+//   taskDefinition: taskDefinition.arn,
+//   cluster: cluster.id,
+//   desiredCount: numberNodes - 1,
+// });
 
 export const ip = lb.ip;
